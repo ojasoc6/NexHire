@@ -4,6 +4,7 @@ const cors = require("cors");
 const session = require("express-session");
 require("dotenv").config();
 
+
 const app = express();
 
 // Middleware
@@ -35,6 +36,10 @@ mongoose.connect(process.env.MONGO_URI, {
 // Routes
 const authRoutes = require("./routes/auth");
 app.use("/api/auth", authRoutes);
+
+const freelancerRoutes = require("./routes/freelancers");
+app.use("/api/freelancers", freelancerRoutes);
+
 
 // Test route
 app.get("/", (req, res) => {
