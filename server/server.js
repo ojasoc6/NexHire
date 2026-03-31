@@ -8,13 +8,20 @@ const app = express();
 
 // Middleware
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+  origin: "http://localhost:3000",
+  credentials: true
+}));
 
+// Session setup
 app.use(
   session({
     secret: process.env.SESSION_SECRET,
     resave: false,
-    saveUninitialized: true,
+    saveUninitialized: false,
+    cookie: {
+      maxAge: 1000 * 60 * 60 * 24
+    }
   })
 );
 
@@ -24,6 +31,11 @@ mongoose.connect(process.env.MONGO_URI, {
 })
 .then(() => console.log("MongoDB Connected"))
 .catch((err) => console.log(err));
+
+// Routes
+const authRoutes = require("./routes/auth");
+app.use("/api/auth", authRoutes);
+
 // Test route
 app.get("/", (req, res) => {
   res.send("NexHire API running");
