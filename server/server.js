@@ -40,6 +40,15 @@ app.use("/api/auth", authRoutes);
 const freelancerRoutes = require("./routes/freelancers");
 app.use("/api/freelancers", freelancerRoutes);
 
+const inquiryRoutes = require("./routes/inquiries");
+app.use("/api/inquiries", inquiryRoutes);
+
+const uploadRoutes = require("./routes/upload");
+app.use("/api/upload", uploadRoutes);
+
+// Serve uploaded files statically
+app.use("/uploads", express.static("uploads"));
+
 
 // Test route
 app.get("/", (req, res) => {
