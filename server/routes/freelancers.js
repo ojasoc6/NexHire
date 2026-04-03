@@ -8,34 +8,34 @@ router.get("/", async (req, res) => {
   try {
     const { skills, minExp, maxRate, availability } = req.query;
 
-    // Build filter object dynamically
     let filter = {};
+
+    // Only show freelancers with at least a bio or skills filled in
+    filter.bio = { $exists: true, $ne: "" };
 
     if (skills) {
       const skillArray = skills.split(",").map(s => s.trim());
       filter.skills = { $in: skillArray };
     }
+    if (minExp) filter.experienceYears = { $gte: Number(minExp) };
+    if (maxRate) filter.hourlyRate = { $lte: Number(maxRate) };
+    if (availability) filter.availability = availability;
 
-    if (minExp) {
-      filter.experienceYears = { $gte: Number(minExp) };
-    }
+   const freelancers = await Freelancer.find(filter)
+  .populate({
+    path: 'userId',
+    select: 'name email role',
+    match: { role: 'freelancer' }
+  });
 
-    if (maxRate) {
-      filter.hourlyRate = { $lte: Number(maxRate) };
-    }
-
-    if (availability) {
-      filter.availability = availability;
-    }
-
-    const freelancers = await Freelancer.find(filter).populate("userId", "name email");
-    res.json(freelancers);
+// Filter out nulls (clients whose userId didn't match)
+const filtered = freelancers.filter(f => f.userId !== null);
+res.json(filtered);
 
   } catch (err) {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 });
-
 // GET /api/freelancers/:id — Get single freelancer profile
 router.get("/:id", async (req, res) => {
   try {

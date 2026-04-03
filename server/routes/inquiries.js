@@ -49,6 +49,15 @@ router.post("/", async (req, res) => {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 });
+// GET /api/inquiries/client/:email — Get all inquiries sent by a client
+router.get("/client/:email", async (req, res) => {
+  try {
+    const inquiries = await Inquiry.find({ clientEmail: req.params.email });
+    res.json(inquiries);
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
 
 // GET /api/inquiries/:freelancerId — Get all inquiries for a freelancer (protected)
 router.get("/:freelancerId", authMiddleware, async (req, res) => {
