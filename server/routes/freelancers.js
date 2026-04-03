@@ -15,7 +15,7 @@ router.get("/", async (req, res) => {
 
     if (skills) {
       const skillArray = skills.split(",").map(s => s.trim());
-      filter.skills = { $in: skillArray };
+      filter.skills = { $in: skillArray.map(s => new RegExp(s, 'i')) };
     }
     if (minExp) filter.experienceYears = { $gte: Number(minExp) };
     if (maxRate) filter.hourlyRate = { $lte: Number(maxRate) };

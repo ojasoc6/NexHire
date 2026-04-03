@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Search Freelancers — NexHire</title>
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <!-- jQuery -->
+  <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+
+  <style>
+    body { background-color: #f8f9fa; font-family: 'Segoe UI', sans-serif; }
+
+    .hero {
+      background: linear-gradient(135deg, #0f3460, #16213e);
+      color: white;
+      padding: 40px 0;
+      text-align: center;
+    }
+
+    .card {
+      border-radius: 16px !important;
+      border: none !important;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    }
+
+    .skill-badge {
+      background-color: #e8f0fe;
+      color: #0f3460;
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 12px;
+      margin: 2px;
+      display: inline-block;
+    }
+
+    .freelancer-card {
+      border-radius: 16px;
+      border: none;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      padding: 20px;
+      background: white;
+      transition: transform 0.2s;
+    }
+
+    .freelancer-card:hover { transform: translateY(-4px); }
+
+    .availability-available { color: #198754; }
+    .availability-busy { color: #dc3545; }
+    .availability-part-time { color: #fd7e14; }
+
+    .filter-section {
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      margin-bottom: 24px;
+    }
+
+    .error-msg { color: #dc3545; font-size: 14px; margin-top: 4px; display: none; }
+    .spinner { display: none; text-align: center; padding: 40px; }
+    #results-count { color: #666; font-size: 14px; margin-bottom: 16px; }
+    #no-results { display: none; text-align: center; padding: 40px; color: #999; }
+  </style>
+</head>
+
+<body>
+  <!-- Navbar -->
+  <nav class="navbar navbar-dark" style="background-color: #0f3460;">
+    <div class="container">
+      <a class="navbar-brand fw-bold fs-4" href="http://localhost:3000">NexHire</a>
+      <span class="text-white opacity-75">jQuery Search</span>
+      <a href="http://localhost:3000/browse" class="btn btn-outline-light btn-sm">← Back to Browse</a>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="container">
+      <h1 class="fw-bold mb-2">Advanced Freelancer Search</h1>
+      <p class="opacity-75 mb-0">Powered by jQuery + AJAX</p>
+    </div>
+  </div>
+
+  <div class="container py-5">
+    <div class="row">
+
+      <!-- Sidebar Filters -->
+      <div class="col-md-3">
+        <div class="filter-section">
+          <h6 class="fw-bold mb-4">🔎 Filter & Search</h6>
+
+          <!-- Skill Search -->
+          <div class="mb-3">
+            <label class="form-label small fw-bold">Skill</label>
+            <input type="text" id="skill-input" class="form-control"
+              placeholder="e.g. React, Python"/>
+            <div class="error-msg" id="skill-error">Please enter a valid skill</div>
+          </div>
+
+          <!-- Availability checkboxes -->
+          <div class="mb-3">
+            <label class="form-label small fw-bold">Availability</label>
+            <div class="form-check">
+              <input class="form-check-input availability-check" type="checkbox"
+                value="available" id="check-available"/>
+              <label class="form-check-label availability-available" for="check-available">Available</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input availability-check" type="checkbox"
+                value="busy" id="check-busy"/>
+              <label class="form-check-label availability-busy" for="check-busy">Busy</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input availability-check" type="checkbox"
+                value="part-time" id="check-part"/>
+              <label class="form-check-label availability-part-time" for="check-part">Part Time</label>
+            </div>
+          </div>
+
+          <!-- Max Rate -->
+          <div class="mb-3">
+            <label class="form-label small fw-bold">
+              Max Rate: $<span id="rate-display">100</span>/hr
+            </label>
+            <input type="range" class="form-range" id="rate-slider"
+              min="10" max="200" value="100" step="5"/>
+            <div class="error-msg" id="rate-error">Rate must be between $10 and $200</div>
+          </div>
+
+          <!-- Min Experience -->
+          <div class="mb-3">
+            <label class="form-label small fw-bold">Min Experience (years)</label>
+            <input type="number" id="exp-input" class="form-control"
+              placeholder="e.g. 2" min="0" max="30"/>
+            <div class="error-msg" id="exp-error">Please enter a valid number (0-30)</div>
+          </div>
+
+          <!-- Buttons -->
+          <button id="search-btn" class="btn w-100 text-white mb-2"
+            style="background-color: #0f3460; border-radius: 8px;">
+            Search
+          </button>
+          <button id="reset-btn" class="btn w-100 btn-outline-secondary"
+            style="border-radius: 8px;">
+            Reset
+          </button>
+
+          <!-- Live search toggle -->
+          <div class="form-check mt-3">
+            <input class="form-check-input" type="checkbox" id="live-search"/>
+            <label class="form-check-label small" for="live-search">
+              Live Search (auto search on change)
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Results -->
+      <div class="col-md-9">
+        <div id="results-count"></div>
+
+        <!-- Spinner -->
+        <div class="spinner" id="spinner">
+          <div class="spinner-border" style="color: #0f3460;"></div>
+          <p class="mt-2 text-muted">Searching...</p>
+        </div>
+
+        <!-- No results -->
+        <div id="no-results">
+          <h5>No freelancers found</h5>
+          <p>Try adjusting your filters</p>
+        </div>
+
+        <!-- Results Grid -->
+        <div class="row g-4" id="results-grid"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    $(document).ready(function () {
+
+      // ── DOM READY: load all freelancers on page load
+      fetchFreelancers({});
+
+      // ── Rate slider live display
+      $('#rate-slider').on('input', function () {
+        $('#rate-display').text($(this).val());
+        if ($('#live-search').is(':checked')) {
+          validateAndSearch();
+        }
+      });
+
+      // ── Live search on skill input
+      $('#skill-input').on('keyup', function () {
+        if ($('#live-search').is(':checked')) {
+          validateAndSearch();
+        }
+      });
+
+      // ── Live search on checkbox change
+      $('.availability-check').on('change', function () {
+        if ($('#live-search').is(':checked')) {
+          validateAndSearch();
+        }
+      });
+
+      // ── Live search on experience input
+      $('#exp-input').on('keyup', function () {
+        if ($('#live-search').is(':checked')) {
+          validateAndSearch();
+        }
+      });
+
+      // ── Search button click
+      $('#search-btn').on('click', function () {
+        validateAndSearch();
+      });
+
+      // ── Reset button
+      $('#reset-btn').on('click', function () {
+        // Reset all inputs using jQuery DOM manipulation
+        $('#skill-input').val('');
+        $('#exp-input').val('');
+        $('#rate-slider').val(100);
+        $('#rate-display').text('100');
+        $('.availability-check').prop('checked', false);
+        $('.error-msg').hide();
+        $('#skill-input').removeClass('is-invalid');
+        $('#exp-input').removeClass('is-invalid');
+        fetchFreelancers({});
+      });
+
+      // ── Enter key on inputs triggers search
+      $('#skill-input, #exp-input').on('keypress', function (e) {
+        if (e.which === 13) validateAndSearch();
+      });
+
+      // ── Validate inputs before AJAX call
+      function validateAndSearch() {
+        let valid = true;
+
+        // Validate skill — only letters, spaces, commas, dots allowed
+        const skill = $('#skill-input').val().trim();
+        if (skill && !/^[a-zA-Z0-9\s,.\+#]+$/.test(skill)) {
+          $('#skill-error').show();
+          $('#skill-input').addClass('is-invalid');
+          valid = false;
+        } else {
+          $('#skill-error').hide();
+          $('#skill-input').removeClass('is-invalid');
+        }
+
+        // Validate experience
+        const exp = $('#exp-input').val();
+        if (exp && (isNaN(exp) || exp < 0 || exp > 30)) {
+          $('#exp-error').show();
+          $('#exp-input').addClass('is-invalid');
+          valid = false;
+        } else {
+          $('#exp-error').hide();
+          $('#exp-input').removeClass('is-invalid');
+        }
+
+        // Validate rate
+        const rate = parseInt($('#rate-slider').val());
+        if (rate < 10 || rate > 200) {
+          $('#rate-error').show();
+          valid = false;
+        } else {
+          $('#rate-error').hide();
+        }
+
+        if (!valid) return;
+
+        // Build params object
+        const params = {};
+        if (skill) params.skills = skill;
+        if (exp) params.minExp = exp;
+        params.maxRate = rate;
+
+        // Get checked availabilities
+        const availabilities = [];
+        $('.availability-check:checked').each(function () {
+          availabilities.push($(this).val());
+        });
+        if (availabilities.length === 1) {
+          params.availability = availabilities[0];
+        }
+
+        fetchFreelancers(params);
+      }
+
+      // ── AJAX call to Express API
+      function fetchFreelancers(params) {
+        $('#spinner').show();
+        $('#results-grid').empty();
+        $('#no-results').hide();
+        $('#results-count').text('');
+
+        $.ajax({
+          url: 'http://localhost:5000/api/freelancers',
+          method: 'GET',
+          data: params,
+          success: function (freelancers) {
+            $('#spinner').hide();
+
+            if (freelancers.length === 0) {
+              $('#no-results').show();
+              $('#results-count').text('0 freelancers found');
+              return;
+            }
+
+            $('#results-count').text(freelancers.length + ' freelancer(s) found');
+
+            // Build cards using jQuery DOM manipulation
+            $.each(freelancers, function (i, f) {
+              const skills = (f.skills || []).slice(0, 4).map(s =>
+                `<span class="skill-badge">${s}</span>`
+              ).join('');
+
+              const availClass = 'availability-' + (f.availability || '').replace(' ', '-');
+
+              const card = $(`
+                <div class="col-md-6">
+                  <div class="freelancer-card">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                      <div>
+                        <h6 class="fw-bold mb-0">${f.userId?.name || 'Freelancer'}</h6>
+                        <small class="text-muted">${f.userId?.email || ''}</small>
+                      </div>
+                      <span class="${availClass} fw-bold small">${f.availability || ''}</span>
+                    </div>
+                    <p class="small text-muted mb-2">${f.bio || 'No bio provided'}</p>
+                    <div class="mb-3">${skills}</div>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                      <span class="fw-bold" style="color:#0f3460">$${f.hourlyRate}/hr</span>
+                      <span class="text-muted small">${f.experienceYears} yrs exp</span>
+                    </div>
+                    <a href="http://localhost:3000/profile/${f._id}"
+                      class="btn btn-sm w-100 text-white"
+                      style="background-color:#0f3460; border-radius:8px;">
+                      View Profile
+                    </a>
+                  </div>
+                </div>
+              `);
+
+              $('#results-grid').append(card);
+            });
+          },
+          error: function (xhr, status, err) {
+            $('#spinner').hide();
+            $('#results-count').html('<span class="text-danger">Error loading freelancers. Is your server running?</span>');
+          }
+        });
+      }
+
+    });
+  </script>
+
+</body>
+</html>

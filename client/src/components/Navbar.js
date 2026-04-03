@@ -27,13 +27,18 @@ function Navbar() {
         <div className="collapse navbar-collapse" id="navbarNav">
           <ul className="navbar-nav ms-auto align-items-center">
             <li className="nav-item">
-  <Link className="nav-link" to="/browse">Browse Freelancers</Link>
-</li>
-<li className="nav-item">
-  <a className="nav-link" href="/compare.html" target="_blank">
-  Compare
-</a>
-</li>
+              <Link className="nav-link" to="/browse">Browse Freelancers</Link>
+            </li>
+            <li className="nav-item">
+              <a className="nav-link" href="/compare.html" target="_blank">
+              Compare
+              </a>
+            </li>
+            <li className="nav-item">
+                <a className="nav-link" href="/search.html" target="_blank">
+                jQuery Search
+                </a>
+            </li>
             {user ? (
               <>
                 <li className="nav-item">
