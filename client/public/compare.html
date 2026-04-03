@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="NexHireApp">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Compare Freelancers — NexHire</title>
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <!-- AngularJS -->
+  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
+
+  <style>
+    body { background-color: #f8f9fa; font-family: 'Segoe UI', sans-serif; }
+
+    .navbar-brand { font-size: 1.5rem; font-weight: 800; }
+
+    .hero {
+      background: linear-gradient(135deg, #0f3460, #16213e);
+      color: white;
+      padding: 50px 0 30px;
+      text-align: center;
+    }
+
+    .card {
+      border-radius: 16px !important;
+      border: none !important;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    }
+
+    .skill-badge {
+      background-color: #e8f0fe;
+      color: #0f3460;
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 12px;
+      margin: 2px;
+      display: inline-block;
+    }
+
+    .stat-box {
+      background: #f8f9fa;
+      border-radius: 10px;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .availability-available { color: #198754; font-weight: bold; }
+    .availability-busy { color: #dc3545; font-weight: bold; }
+    .availability-part-time { color: #fd7e14; font-weight: bold; }
+
+    .compare-header {
+      background-color: #0f3460;
+      color: white;
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+
+    .winner-badge {
+      background-color: #e94560;
+      color: white;
+      border-radius: 20px;
+      padding: 2px 10px;
+      font-size: 11px;
+    }
+
+    .filter-card {
+      border-radius: 16px;
+      border: none;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    .portfolio-item {
+      background: #f8f9fa;
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+
+<body ng-controller="CompareCtrl">
+
+  <!-- Navbar -->
+  <nav class="navbar navbar-dark" style="background-color: #0f3460;">
+    <div class="container">
+      <a class="navbar-brand" href="http://localhost:3000">NexHire</a>
+      <span class="text-white opacity-75">Freelancer Compare Tool</span>
+      <a href="http://localhost:3000/browse" class="btn btn-outline-light btn-sm">← Back to Browse</a>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="container">
+      <h1 class="fw-bold mb-2">Compare Freelancers</h1>
+      <p class="opacity-75">Filter, select and compare freelancers side by side</p>
+    </div>
+  </div>
+
+  <div class="container py-5">
+
+    <!-- Loading -->
+    <div ng-if="loading" class="text-center py-5">
+      <div class="spinner-border" style="color: #0f3460;"></div>
+      <p class="mt-2 text-muted">Loading freelancers...</p>
+    </div>
+
+    <!-- Error -->
+    <div ng-if="error" class="alert alert-danger">{{error}}</div>
+
+    <div ng-if="!loading">
+
+      <!-- Filters -->
+      <div class="filter-card">
+        <h5 class="fw-bold mb-4">🔎 Filter Freelancers</h5>
+        <div class="row g-3">
+          <div class="col-md-3">
+            <label class="form-label small fw-bold">Search by Skill</label>
+            <input type="text" class="form-control" ng-model="filters.skill"
+              placeholder="e.g. React, Python"/>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small fw-bold">Max Hourly Rate ($/hr)</label>
+            <input type="number" class="form-control" ng-model="filters.maxRate"
+              placeholder="e.g. 50"/>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small fw-bold">Min Experience (yrs)</label>
+            <input type="number" class="form-control" ng-model="filters.minExp"
+              placeholder="e.g. 2"/>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small fw-bold">Availability</label>
+            <select class="form-select" ng-model="filters.availability">
+              <option value="">All</option>
+              <option value="available">Available</option>
+              <option value="busy">Busy</option>
+              <option value="part-time">Part Time</option>
+            </select>
+          </div>
+        </div>
+        <div class="mt-3 d-flex gap-2">
+          <button class="btn text-white" style="background-color:#0f3460;"
+            ng-click="applyFilters()">Apply Filters</button>
+          <button class="btn btn-outline-secondary"
+            ng-click="resetFilters()">Reset</button>
+        </div>
+        <p class="text-muted small mt-2 mb-0">
+          Showing {{filteredFreelancers().length}} of {{freelancers.length}} freelancers
+        </p>
+      </div>
+
+      <!-- Sort -->
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h5 class="fw-bold mb-0">Select up to 2 freelancers to compare</h5>
+        <div class="d-flex align-items-center gap-2">
+          <label class="small fw-bold mb-0">Sort by:</label>
+          <select class="form-select form-select-sm w-auto" ng-model="sortBy">
+            <option value="hourlyRate">Hourly Rate</option>
+            <option value="experienceYears">Experience</option>
+            <option value="rating">Rating</option>
+          </select>
+          <select class="form-select form-select-sm w-auto" ng-model="sortOrder">
+            <option value="asc">Low to High</option>
+            <option value="desc">High to Low</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Freelancer Grid -->
+      <div class="row g-3 mb-5">
+        <div class="col-md-4" ng-repeat="f in sortedFreelancers() track by f._id">
+          <div class="card p-3" ng-class="{'border border-2': isSelected(f)}"
+            ng-style="{'border-color': isSelected(f) ? '#0f3460' : 'transparent'}">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <div>
+                <h6 class="fw-bold mb-0">{{f.userId.name}}</h6>
+                <small class="text-muted">{{f.userId.email}}</small>
+              </div>
+              <span ng-class="'availability-' + f.availability.replace(' ', '-')">
+                {{f.availability}}
+              </span>
+            </div>
+            <p class="small text-muted mb-2">{{f.bio || 'No bio'}}</p>
+            <div class="mb-2">
+              <span class="skill-badge" ng-repeat="s in f.skills | limitTo:3">{{s}}</span>
+            </div>
+            <div class="d-flex justify-content-between mb-3">
+              <span class="fw-bold" style="color:#0f3460">${{f.hourlyRate}}/hr</span>
+              <span class="text-muted small">{{f.experienceYears}} yrs</span>
+            </div>
+            <button class="btn btn-sm w-100"
+              ng-class="isSelected(f) ? 'btn-danger' : 'btn-outline-primary'"
+              ng-click="toggleSelect(f)"
+              ng-disabled="!isSelected(f) && selected.length >= 2">
+              {{isSelected(f) ? '✓ Selected (Remove)' : 'Select to Compare'}}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Compare Table -->
+      <div ng-if="selected.length === 2">
+        <h4 class="fw-bold mb-4 text-center">Side by Side Comparison</h4>
+        <div class="card p-4">
+
+          <!-- Headers -->
+          <div class="row mb-4">
+            <div class="col-4"></div>
+            <div class="col-4">
+              <div class="compare-header">
+                <h5 class="mb-0 fw-bold">{{selected[0].userId.name}}</h5>
+                <small>{{selected[0].userId.email}}</small>
+              </div>
+            </div>
+            <div class="col-4">
+              <div class="compare-header">
+                <h5 class="mb-0 fw-bold">{{selected[1].userId.name}}</h5>
+                <small>{{selected[1].userId.email}}</small>
+              </div>
+            </div>
+          </div>
+
+          <!-- Hourly Rate -->
+          <div class="row mb-3 align-items-center">
+            <div class="col-4"><strong>💰 Hourly Rate</strong></div>
+            <div class="col-4 text-center">
+              <div class="stat-box">
+                ${{selected[0].hourlyRate}}/hr
+                <span class="winner-badge ms-1"
+                  ng-if="selected[0].hourlyRate < selected[1].hourlyRate">Better</span>
+              </div>
+            </div>
+            <div class="col-4 text-center">
+              <div class="stat-box">
+                ${{selected[1].hourlyRate}}/hr
+                <span class="winner-badge ms-1"
+                  ng-if="selected[1].hourlyRate < selected[0].hourlyRate">Better</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Experience -->
+          <div class="row mb-3 align-items-center">
+            <div class="col-4"><strong>📅 Experience</strong></div>
+            <div class="col-4 text-center">
+              <div class="stat-box">
+                {{selected[0].experienceYears}} years
+                <span class="winner-badge ms-1"
+                  ng-if="selected[0].experienceYears > selected[1].experienceYears">Better</span>
+              </div>
+            </div>
+            <div class="col-4 text-center">
+              <div class="stat-box">
+                {{selected[1].experienceYears}} years
+                <span class="winner-badge ms-1"
+                  ng-if="selected[1].experienceYears > selected[0].experienceYears">Better</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Availability -->
+          <div class="row mb-3 align-items-center">
+            <div class="col-4"><strong>🟢 Availability</strong></div>
+            <div class="col-4 text-center">
+              <div class="stat-box">
+                <span ng-class="'availability-' + selected[0].availability">
+                  {{selected[0].availability}}
+                </span>
+              </div>
+            </div>
+            <div class="col-4 text-center">
+              <div class="stat-box">
+                <span ng-class="'availability-' + selected[1].availability">
+                  {{selected[1].availability}}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Skills -->
+          <div class="row mb-3 align-items-start">
+            <div class="col-4"><strong>🛠 Skills</strong></div>
+            <div class="col-4 text-center">
+              <div class="stat-box">
+                <span class="skill-badge" ng-repeat="s in selected[0].skills">{{s}}</span>
+              </div>
+            </div>
+            <div class="col-4 text-center">
+              <div class="stat-box">
+                <span class="skill-badge" ng-repeat="s in selected[1].skills">{{s}}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Portfolio Count -->
+          <div class="row mb-3 align-items-center">
+            <div class="col-4"><strong>📁 Portfolio Items</strong></div>
+            <div class="col-4 text-center">
+              <div class="stat-box">
+                {{selected[0].portfolio.length}} projects
+                <span class="winner-badge ms-1"
+                  ng-if="selected[0].portfolio.length > selected[1].portfolio.length">Better</span>
+              </div>
+            </div>
+            <div class="col-4 text-center">
+              <div class="stat-box">
+                {{selected[1].portfolio.length}} projects
+                <span class="winner-badge ms-1"
+                  ng-if="selected[1].portfolio.length > selected[0].portfolio.length">Better</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bio -->
+          <div class="row mb-3 align-items-start">
+            <div class="col-4"><strong>📝 Bio</strong></div>
+            <div class="col-4">
+              <div class="stat-box text-start">{{selected[0].bio || 'No bio'}}</div>
+            </div>
+            <div class="col-4">
+              <div class="stat-box text-start">{{selected[1].bio || 'No bio'}}</div>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="row mt-4">
+            <div class="col-4"></div>
+            <div class="col-4 text-center">
+              <a href="http://localhost:3000/profile/{{selected[0]._id}}"
+                class="btn text-white w-100" style="background-color:#0f3460; border-radius:8px;">
+                View Full Profile
+              </a>
+            </div>
+            <div class="col-4 text-center">
+              <a href="http://localhost:3000/profile/{{selected[1]._id}}"
+                class="btn text-white w-100" style="background-color:#0f3460; border-radius:8px;">
+                View Full Profile
+              </a>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Prompt if less than 2 selected -->
+      <div ng-if="selected.length < 2" class="text-center py-4 text-muted">
+        <h5>Select {{2 - selected.length}} more freelancer(s) to compare</h5>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    angular.module('NexHireApp', [])
+      .controller('CompareCtrl', function($scope, $http) {
+
+        $scope.freelancers = [];
+        $scope.selected = [];
+        $scope.loading = true;
+        $scope.error = null;
+        $scope.sortBy = 'hourlyRate';
+        $scope.sortOrder = 'asc';
+        $scope.filters = { skill: '', maxRate: '', minExp: '', availability: '' };
+        $scope.activeFilters = {};
+
+        // Fetch all freelancers from Express API
+        $http.get('http://localhost:5000/api/freelancers')
+          .then(function(res) {
+            $scope.freelancers = res.data;
+            $scope.loading = false;
+          })
+          .catch(function() {
+            $scope.error = 'Could not load freelancers. Make sure your server is running.';
+            $scope.loading = false;
+          });
+
+        // Apply filters
+        $scope.applyFilters = function() {
+          $scope.activeFilters = angular.copy($scope.filters);
+        };
+
+        // Reset filters
+        $scope.resetFilters = function() {
+          $scope.filters = { skill: '', maxRate: '', minExp: '', availability: '' };
+          $scope.activeFilters = {};
+        };
+
+        // Filter function
+        $scope.filteredFreelancers = function() {
+          return $scope.freelancers.filter(function(f) {
+            const af = $scope.activeFilters;
+            if (af.skill && !f.skills.some(s => s.toLowerCase().includes(af.skill.toLowerCase()))) return false;
+            if (af.maxRate && f.hourlyRate > af.maxRate) return false;
+            if (af.minExp && f.experienceYears < af.minExp) return false;
+            if (af.availability && f.availability !== af.availability) return false;
+            return true;
+          });
+        };
+
+        // Sort function
+        $scope.sortedFreelancers = function() {
+          const list = $scope.filteredFreelancers().slice();
+          list.sort(function(a, b) {
+            const key = $scope.sortBy;
+            return $scope.sortOrder === 'asc' ? a[key] - b[key] : b[key] - a[key];
+          });
+          return list;
+        };
+
+        // Select/deselect
+        $scope.toggleSelect = function(f) {
+          const idx = $scope.selected.findIndex(s => s._id === f._id);
+          if (idx > -1) {
+            $scope.selected.splice(idx, 1);
+          } else if ($scope.selected.length < 2) {
+            $scope.selected.push(f);
+          }
+        };
+
+        $scope.isSelected = function(f) {
+          return $scope.selected.some(s => s._id === f._id);
+        };
+
+      });
+  </script>
+
+</body>
+</html>
