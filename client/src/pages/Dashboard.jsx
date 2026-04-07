@@ -32,26 +32,44 @@ function Dashboard() {
 
   // Freelancer — sees incoming inquiries
   const fetchFreelancerDashboard = async (parsedUser) => {
-    try {
-      const flRes = await fetch('http://localhost:5000/api/freelancers', { credentials: 'include' });
-      const allFreelancers = await flRes.json();
-      const myProfile = allFreelancers.find(f => f.userId?._id === parsedUser.id);
-      if (myProfile) {
-        setFreelancer(myProfile);
-        setProfileForm({    
-                bio: myProfile.bio || '',
-                skills: (myProfile.skills || []).join(', '),
-                hourlyRate: myProfile.hourlyRate || '',
-                experienceYears: myProfile.experienceYears || '',
-                availability: myProfile.availability || 'available'
-            });
-        const inqRes = await fetch(`http://localhost:5000/api/inquiries/${myProfile._id}`, { credentials: 'include' });
-        const inqData = await inqRes.json();
-        setInquiries(inqData);
-      }
-    } catch (err) { console.error(err); }
-    setLoading(false);
-  };
+  try {
+    const flRes = await fetch('http://localhost:5000/api/freelancers/me', {
+      credentials: 'include'
+    });
+
+    if (!flRes.ok) {
+      const err = await flRes.text();
+      console.error("Fetch failed:", err);
+      setLoading(false); // ✅ IMPORTANT
+      return;
+    }
+
+    const myProfile = await flRes.json();
+
+    setFreelancer(myProfile);
+
+    setProfileForm({
+      bio: myProfile.bio || '',
+      skills: (myProfile.skills || []).join(', '),
+      hourlyRate: myProfile.hourlyRate || '',
+      experienceYears: myProfile.experienceYears || '',
+      availability: myProfile.availability || 'available'
+    });
+
+    const inqRes = await fetch(
+      `http://localhost:5000/api/inquiries/${myProfile._id}`,
+      { credentials: 'include' }
+    );
+
+    const inqData = await inqRes.json();
+    setInquiries(inqData);
+
+  } catch (err) {
+    console.error("Error:", err);
+  }
+
+  setLoading(false); // ✅ ALWAYS RUN
+};
 
   // Client — sees their sent inquiries by email
   const fetchClientDashboard = async (email) => {
@@ -80,6 +98,10 @@ function Dashboard() {
   setSaving(true);
   setMessage('');
   try {
+        if (!freelancer?._id) {
+          alert("Freelancer profile not loaded yet");
+          return;
+        }
     const res = await fetch(`http://localhost:5000/api/freelancers/${freelancer._id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -91,11 +113,14 @@ function Dashboard() {
         experienceYears: Number(profileForm.experienceYears)
       })
     });
-    if (res.ok) {
-      setMessage('Profile updated successfully!');
-      setEditMode(false);
-      fetchFreelancerDashboard(user);
-    }
+   if (!res.ok) {
+        const err = await res.text();
+        console.error("Update failed:", err);
+      }else {
+          setMessage('Profile updated successfully!');
+          setEditMode(false);
+          fetchFreelancerDashboard(user);
+        } 
   } catch (err) { console.error(err); }
   setSaving(false);
 };
@@ -104,6 +129,10 @@ const savePortfolio = async () => {
   setSaving(true);
   setMessage('');
   try {
+        if (!freelancer?._id) {
+          alert("Freelancer profile not loaded yet");
+          return;
+        }
     const res = await fetch(`http://localhost:5000/api/freelancers/${freelancer._id}/portfolio`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

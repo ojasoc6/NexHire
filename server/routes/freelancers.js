@@ -3,6 +3,20 @@ const router = express.Router();
 const Freelancer = require("../models/Freelancer");
 const authMiddleware = require("../middleware/auth");
 
+router.get('/me', authMiddleware, async (req, res) => {
+  try {
+    const freelancer = await Freelancer.findOne({ userId: req.session.userId });
+    if (!freelancer) {
+      return res.status(404).json({ message: 'Freelancer not found' });
+    }
+    res.json(freelancer);
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+
+
 // GET /api/freelancers — Get all freelancers with optional filters
 router.get("/", async (req, res) => {
   try {
